@@ -1,5 +1,5 @@
 use dco3::{auth::Connected, nodes::NodeType, Dracoon, Nodes, OAuth2Flow, RescueKeyPair};
-use tracing::{error, info, debug};
+use tracing::{error, info};
 
 use self::models::{CryptoNautError, CryptoNautConfig};
 
@@ -13,7 +13,6 @@ pub async fn distribute_missing_keys(path: String, config: &CryptoNautConfig) ->
     let (node_id, node_type) = get_node_info(&client, path).await?;
 
     let rescue_key_secret = config.get_rescue_key();
-    debug!("Rescue key: {}", rescue_key_secret);
 
     match (node_id, node_type) {
         (0, _) => {
@@ -126,9 +125,6 @@ async fn get_client_and_path(
 
     let client_id = config.get_client_id();
     let client_secret = config.get_client_secret();
-
-    debug!("Client ID: {}", client_id);
-    debug!("Client Secret: {}", client_secret);
 
     let (base_url, path) = split_url(&path.into())?;
 
