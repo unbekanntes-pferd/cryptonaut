@@ -1,5 +1,5 @@
 use dco3::{auth::Connected, nodes::NodeType, Dracoon, Nodes, OAuth2Flow, RescueKeyPair};
-use tracing::{error, info};
+use tracing::{error, info, debug};
 
 use self::models::{CryptoNautError, CryptoNautConfig};
 
@@ -107,6 +107,8 @@ async fn get_node_info(
             NodeType::Folder => node.auth_parent_id.unwrap_or(0),
             _ => node.id,
         };
+
+        debug!("Node info: {} (id) {:?} (type)", node_id, node.node_type);
 
         return Ok((node_id, node.node_type));
     }
