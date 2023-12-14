@@ -1,13 +1,16 @@
 use dco3::{auth::Connected, nodes::NodeType, Dracoon, Nodes, OAuth2Flow, RescueKeyPair};
-use tracing::{error, info, debug};
+use tracing::{debug, error, info};
 
-use self::models::{CryptoNautError, CryptoNautConfig};
+use self::models::{CryptoNautConfig, CryptoNautError};
 
 pub mod models;
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "|", env!("CARGO_PKG_VERSION"));
 
-pub async fn distribute_missing_keys(path: String, config: &CryptoNautConfig) -> Result<(), CryptoNautError> {
+pub async fn distribute_missing_keys(
+    path: String,
+    config: &CryptoNautConfig,
+) -> Result<(), CryptoNautError> {
     let (client, path) = get_client_and_path(path, config).await?;
 
     let (node_id, node_type) = get_node_info(&client, path).await?;
@@ -27,7 +30,7 @@ pub async fn distribute_missing_keys(path: String, config: &CryptoNautConfig) ->
 
             let node_id = Some(node_id);
 
-           distribute_all_keys(&client, rescue_key_secret, node_id, None).await?;
+            distribute_all_keys(&client, rescue_key_secret, node_id, None).await?;
         }
         (_, NodeType::File) => {
             info!(
@@ -38,7 +41,6 @@ pub async fn distribute_missing_keys(path: String, config: &CryptoNautConfig) ->
             let node_id = Some(node_id);
 
             distribute_all_keys(&client, &rescue_key_secret, None, node_id).await?;
-
         }
     };
 
@@ -47,15 +49,19 @@ pub async fn distribute_missing_keys(path: String, config: &CryptoNautConfig) ->
     Ok(())
 }
 
-async fn distribute_all_keys(client: &Dracoon<Connected>, rescue_key_secret: &str, room_id: Option<u64>, file_id: Option<u64>) -> Result<(), CryptoNautError> { 
-
-    let mut missing_keys = client
-        .distribute_missing_keys(&rescue_key_secret, room_id, file_id, None)
-        .await
-        .map_err(|err| {
-            error!("Error: {}", err);
-            err
-        })?;
+async fn distribute_all_keys(
+    client: &Dracoon<Connected>,
+    rescue_key_secret: &str,
+    room_id: Option<u64>,
+    file_id: Option<u64>,
+) -> Result<(), CryptoNautError> {
+    let mut missing_keys =
+        RescueKeyPair::distribute_missing_keys(client, &rescue_key_secret, room_id, file_id, None)
+            .await
+            .map_err(|err| {
+                error!("Error: {}", err);
+                err
+            })?;
 
     let distributed_keys = if missing_keys > 100 {
         100
@@ -67,13 +73,18 @@ async fn distribute_all_keys(client: &Dracoon<Connected>, rescue_key_secret: &st
 
     while missing_keys > 100 {
         info!("More keys found - fetching again");
-        missing_keys = client
-            .distribute_missing_keys(&rescue_key_secret, room_id, file_id, None)
-            .await
-            .map_err(|err| {
-                error!("Error: {}", err);
-                err
-            })?;
+        missing_keys = RescueKeyPair::distribute_missing_keys(
+            client,
+            &rescue_key_secret,
+            room_id,
+            file_id,
+            None,
+        )
+        .await
+        .map_err(|err| {
+            error!("Error: {}", err);
+            err
+        })?;
 
         let distributed_keys = if missing_keys > 100 {
             100
@@ -85,7 +96,6 @@ async fn distribute_all_keys(client: &Dracoon<Connected>, rescue_key_secret: &st
     }
 
     Ok(())
-
 }
 
 async fn get_node_info(
@@ -121,9 +131,7 @@ async fn get_client_and_path(
     path: impl Into<String>,
     config: &CryptoNautConfig,
 ) -> Result<(Dracoon<Connected>, String), CryptoNautError> {
-    let refresh_token =
-        config
-            .get_refresh_token();
+    let refresh_token = config.get_refresh_token();
 
     let client_id = config.get_client_id();
     let client_secret = config.get_client_secret();
@@ -142,7 +150,6 @@ async fn get_client_and_path(
 
     Ok((dracoon, path))
 }
-
 
 fn split_url(url: &str) -> Result<(String, String), CryptoNautError> {
     if url.starts_with("http://") {
